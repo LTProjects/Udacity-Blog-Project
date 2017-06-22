@@ -15,7 +15,7 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                autoescape = True)
 
 secret = 'fart'
-
+logged_in = False
 def render_str(template, **params):
     t = jinja_env.get_template(template)
     return t.render(params)
@@ -125,6 +125,7 @@ class Post(db.Model):
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
     last_modified = db.DateTimeProperty(auto_now = True)
+#    created_by = 
 
     def render(self):
         self._render_text = self.content.replace('\n', '<br>')
@@ -132,23 +133,25 @@ class Post(db.Model):
 
 class BlogFront(BlogHandler):
     def get(self):
-        posts = Post.all().order('-created')
+#        posts = Post.all().order('-created')
+        posts = db.GqlQuery("select * from Post order by created desc limit 10")
         self.render('front.html', posts = posts)
         
     def post(self):
-#        if not self.user:
-#            self.redirect('/blog')
-
         subject = self.request.get('subject')
         content = self.request.get('content')
 
-        if subject and content:
-            p = Post(parent = blog_key(), subject = subject, content = content)
-            p.put()
-            self.redirect('/blog/%s' % str(p.key().id()))
-        else:
-            error = "subject and content, please!"
+        if not self.user:
+            error = "Please log in or register"    
             self.render("newpost.html", subject=subject, content=content, error=error)
+        else:    
+            if subject and content:
+                p = Post(parent = blog_key(), subject = subject, content = content)
+                p.put()
+                self.redirect('/blog/%s' % str(p.key().id()))
+            else:
+                error = "subject and content, please!"
+                self.render("newpost.html", subject=subject, content=content, error=error)
 
 class PostPage(BlogHandler):
     def get(self, post_id):
@@ -236,9 +239,7 @@ class Signup(BlogHandler):
     def done(self, *a, **kw):
         raise NotImplementedError
 
-class Unit2Signup(Signup):
-    def done(self):
-        self.redirect('/unit2/welcome?username=' + self.username)
+
 
 class Register(Signup):
     def done(self):
@@ -276,43 +277,49 @@ class Logout(BlogHandler):
     def get(self):
         self.logout()
         self.redirect('/blog')
-        print("line 289 was called")
 
 
-class Unit3Welcome(BlogHandler):
-    def get(self):
-        print("line 292 was called")
-        if self.user:
-            print("line 296 was called")
-            self.render('welcome.html', username = self.user.name)
-        else:
-            self.redirect('/signup')
-
-class Welcome(BlogHandler):
-    def get(self):
-        print("line 300 was called")
-        username = self.request.get('username')
-        if valid_username(username):
-            print("line 306 was called")
-            self.render('welcome.html', username = username)
-        else:
-            self.redirect('/unit2/signup')
 
 app = webapp2.WSGIApplication([('/', BlogFront),
-                               ('/unit2/signup', Unit2Signup),
-                               ('/unit2/welcome', Welcome),
                                ('/blog/?', BlogFront),
                                ('/blog/([0-9]+)', PostPage),
                                ('/blog/newpost', NewPost),
                                ('/signup', Register),
                                ('/login', Login),
-                               ('/logout', Logout),
-                               ('/unit3/welcome', Unit3Welcome),
+                               ('/logout', Logout)
+
                                ],
                               debug=True)
 
 
 #                               ('/unit2/rot13', Rot13),
+#                               ('/unit3/welcome', Unit3Welcome),
+#                               ('/unit2/signup', Unit2Signup),
+#                               ('/unit2/welcome', Welcome),
+#
+#
+#class Unit2Signup(Signup):
+#    def done(self):
+#        self.redirect('/unit2/welcome?username=' + self.username)
+#class Welcome(BlogHandler):
+#    def get(self):
+#        print("line 300 was called")
+#        username = self.request.get('username')
+#        if valid_username(username):
+#            print("line 306 was called")
+#            self.render('welcome.html', username = username)
+#        else:
+#            self.redirect('/unit2/signup')
+#
+#class Unit3Welcome(BlogHandler):
+#    def get(self):
+#        print("line 292 was called")
+#        if self.user:
+#            print("line 296 was called")
+#            self.render('welcome.html', username = self.user.name)
+#        else:
+#            self.redirect('/signup')
+
 ###### Unit 2 HW's
 #class Rot13(BlogHandler):
 #    def get(self):
