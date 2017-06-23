@@ -121,7 +121,7 @@ def blog_key(name = 'default'):
     return db.Key.from_path('blogs', name)
 
 class Post(db.Model):
-#    id_key = db.
+
     subject = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
@@ -134,8 +134,8 @@ class Post(db.Model):
 
 class BlogFront(BlogHandler):
     def get(self):
-#        posts = Post.all().order('-created')
-        posts = db.GqlQuery("select * from Post order by created desc limit 10")
+        posts = Post.all().order('-created')
+       # posts = db.GqlQuery("select * from Post order by created desc limit 10")
         self.render('front.html', posts = posts)
         
     def post(self):
@@ -188,12 +188,7 @@ class NewPost(BlogHandler):
             self.render("newpost.html", subject=subject, content=content, error=error)
 
 class EditPost(BlogHandler):
-#    def logged_in(self):
-#        if !self.user:
-##            self.render("newpost.html")
-##        else:
-#            self.redirect("/login")
-            
+                
     def get(self, post_id):
         if self.user:
         #    self.redirect("/login")
@@ -222,7 +217,7 @@ class EditPost(BlogHandler):
             if subject and content:
                 p = Post(parent = post, subject = subject, content = content, created_by = self.user.name)
                 p.put()
-                self.redirect('/blog')
+                self.redirect('/')
             else:
                 error = "subject and content, please!"
                 self.render("newpost.html", subject=subject, content=content, error=error)
