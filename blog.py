@@ -121,11 +121,12 @@ def blog_key(name = 'default'):
     return db.Key.from_path('blogs', name)
 
 class Post(db.Model):
+#    id_key = db.
     subject = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
     last_modified = db.DateTimeProperty(auto_now = True)
-#    created_by = 
+    created_by = db.StringProperty(required = False)
 
     def render(self):
         self._render_text = self.content.replace('\n', '<br>')
@@ -146,7 +147,7 @@ class BlogFront(BlogHandler):
             self.render("newpost.html", subject=subject, content=content, error=error)
         else:    
             if subject and content:
-                p = Post(parent = blog_key(), subject = subject, content = content)
+                p = Post(parent = blog_key(), subject = subject, content = content, created_by = self.user.name)
                 p.put()
                 self.redirect('/blog/%s' % str(p.key().id()))
             else:
@@ -179,14 +180,74 @@ class NewPost(BlogHandler):
         content = self.request.get('content')
 
         if subject and content:
-            p = Post(parent = blog_key(), subject = subject, content = content)
+            p = Post(parent = blog_key(), subject = subject, content = content, created_by = self.user.name)
             p.put()
             self.redirect('/blog/%s' % str(p.key().id()))
         else:
             error = "subject and content, please!"
             self.render("newpost.html", subject=subject, content=content, error=error)
 
+class EditPost(BlogHandler):
+#    def logged_in(self):
+#        if !self.user:
+##            self.render("newpost.html")
+##        else:
+#            self.redirect("/login")
+            
+    def get(self, post_id):
+        if self.user:
+        #    self.redirect("/login")
+            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+            post = db.get(key)
+            subj = post.subject
+            cont = post.content
+            if not post:
+                self.error(404)
+                return
 
+            self.render("editpost.html", post = post, subject=subj , content=cont )
+        else:
+            self.redirect("/login")
+            
+    def post(self, post_id):
+        
+        
+        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+        post = db.get(key)
+        
+        subject = self.request.get('subject')
+        content = self.request.get('content')
+        
+        if self.user.name == post.created_by:
+            if subject and content:
+                p = Post(parent = post, subject = subject, content = content, created_by = self.user.name)
+                p.put()
+                self.redirect('/blog')
+            else:
+                error = "subject and content, please!"
+                self.render("newpost.html", subject=subject, content=content, error=error)
+        else:
+            error = "You Can't edit other people's posts. You are " + self.user.name + " this post was created by " + post.created_by
+            self.render('error.html', error=error)
+
+#
+#    def post(self):
+#        if not self.user:
+#            self.redirect('/blog')
+#
+#        subject = self.request.get('subject')
+#        content = self.request.get('content')
+#        
+#        if self.user == post.created_by:
+#            error = "Dude you can only your own stuff!"
+#            self.render("newpost.html", subject=subject, content=content, error=error)
+#        if subject and content:
+#            p = Post(parent = post, subject = subject, content = content)
+#            p.put()
+#            self.redirect('/blog/%s' % str(p.key().id()))
+#        else:
+#            error = "subject and content, please!"
+#            self.render("newpost.html", subject=subject, content=content, error=error)
 
 
 
@@ -286,7 +347,8 @@ app = webapp2.WSGIApplication([('/', BlogFront),
                                ('/blog/newpost', NewPost),
                                ('/signup', Register),
                                ('/login', Login),
-                               ('/logout', Logout)
+                               ('/logout', Logout),
+                               ('/edit/([0-9]+)', EditPost)
 
                                ],
                               debug=True)
