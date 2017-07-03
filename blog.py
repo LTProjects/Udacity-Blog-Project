@@ -215,8 +215,10 @@ class EditPost(BlogHandler):
         
         if self.user.name == post.created_by:
             if subject and content:
-                p = Post(parent = post, subject = subject, content = content, created_by = self.user.name)
-                p.put()
+#                p = Post(parent = post, subject = subject, content = content, created_by = self.user.name)
+                post.subject = subject
+                post.content = content
+                post.put()
                 self.redirect('/')
             else:
                 error = "subject and content, please!"
