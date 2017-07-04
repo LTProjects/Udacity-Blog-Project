@@ -5,10 +5,13 @@
   {% for p in posts %}
     {{ p.render() | safe }}
     <br>
-created by: {{p.created_by}}
+Created by: {{p.created_by}}
+<br>
+Number of likes : {{p.no_like}}
+<br>
 <br>
 <a href="/edit/{{p.key().id()}}"> Edit </a>
-<a href="base.html">Like</a>
+<a href="/like/{{p.key().id()}}">Like</a>
   {% endfor %}
 
   <h2>new post</h2>

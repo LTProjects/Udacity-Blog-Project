@@ -127,10 +127,20 @@ class Post(db.Model):
     created = db.DateTimeProperty(auto_now_add = True)
     last_modified = db.DateTimeProperty(auto_now = True)
     created_by = db.StringProperty(required = False)
+    no_like = db.IntegerProperty(required = False)
 
     def render(self):
         self._render_text = self.content.replace('\n', '<br>')
         return render_str("post.html", p = self)
+
+#class likes(db.Model):
+#
+#    created_by = db.StringProperty(required = False)
+#    like = db.IntegerProperty(required = False)
+#
+#    def render(self):
+#        self._render_text = self.content.replace('\n', '<br>')
+#        return render_str("post.html", p = self)
 
 class BlogFront(BlogHandler):
     def get(self):
@@ -147,7 +157,7 @@ class BlogFront(BlogHandler):
             self.render("newpost.html", subject=subject, content=content, error=error)
         else:    
             if subject and content:
-                p = Post(parent = blog_key(), subject = subject, content = content, created_by = self.user.name)
+                p = Post(parent = blog_key(), subject = subject, content = content, created_by = self.user.name, no_like = 0)
                 p.put()
                 self.redirect('/blog/%s' % str(p.key().id()))
             else:
@@ -175,12 +185,12 @@ class NewPost(BlogHandler):
     def post(self):
         if not self.user:
             self.redirect('/blog')
-
+            
         subject = self.request.get('subject')
         content = self.request.get('content')
 
         if subject and content:
-            p = Post(parent = blog_key(), subject = subject, content = content, created_by = self.user.name)
+            p = Post(parent = blog_key(), subject = subject, content = content, created_by = self.user.name, no_like = likey)
             p.put()
             self.redirect('/blog/%s' % str(p.key().id()))
         else:
@@ -191,7 +201,6 @@ class EditPost(BlogHandler):
                 
     def get(self, post_id):
         if self.user:
-        #    self.redirect("/login")
             key = db.Key.from_path('Post', int(post_id), parent=blog_key())
             post = db.get(key)
             subj = post.subject
@@ -215,7 +224,6 @@ class EditPost(BlogHandler):
         
         if self.user.name == post.created_by:
             if subject and content:
-#                p = Post(parent = post, subject = subject, content = content, created_by = self.user.name)
                 post.subject = subject
                 post.content = content
                 post.put()
@@ -224,9 +232,58 @@ class EditPost(BlogHandler):
                 error = "subject and content, please!"
                 self.render("newpost.html", subject=subject, content=content, error=error)
         else:
-            error = "You Can't edit other people's posts. You are " + self.user.name + " this post was created by " + post.created_by
+            error = "You can't edit other people's posts. You are " + self.user.name + " this post was created by " + post.created_by
             self.render('error.html', error=error)
+            
+class Like(BlogHandler):
+    
 
+    def get(self, post_id):
+        if self.user:
+            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+            post = db.get(key)
+        else:
+            self.redirect('/login')
+            
+        if self.user.name == post.created_by:
+            error = "You can't like your own posts."
+            self.render('error.html', error=error)
+        else:
+            post.no_like = post.no_like + 1
+            post.put()  
+            self.redirect('/')
+            
+#            error = "Thank you for liking this posts."
+#            self.render('error.html', error=error)
+    
+    def post(self, post_id):
+            if self.user.name == post.created_by:
+
+                key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+                post = db.get(key)
+                post.no_like = post.no_like + 1
+                post.put()
+            
+            
+            
+            
+#    def addLike(self, post_id):
+#        
+#        if self.user.name != post.created_by:
+#            error = "You can't like your own posts. You are " + self.user.name + " this post was created by " + post.created_by
+#            self.render('error.html', error=error)
+#            
+##            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+##            post = db.get(key)
+##            post.no_like = post.no_like + 1
+##            post.put()
+##            self.render('/')
+#        else:
+#            error = "You can't like your own posts. You are " + self.user.name + " this post was created by " + post.created_by
+#            self.render('error.html', error=error)
+
+        
+        
 #
 #    def post(self):
 #        if not self.user:
@@ -345,7 +402,8 @@ app = webapp2.WSGIApplication([('/', BlogFront),
                                ('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
-                               ('/edit/([0-9]+)', EditPost)
+                               ('/edit/([0-9]+)', EditPost),
+                               ('/like/([0-9]+)', Like)
 
                                ],
                               debug=True)
